@@ -1,43 +1,48 @@
 import json
+import re
 
 import alp
 from alp.request import requests
+from alp.request.bs4 import BeautifulSoup
 
-import html5lib
-from lxml.html import tostring
 from conf import *
-
-htmlParser = html5lib.HTMLParser(tree=html5lib.treebuilders.getTreeBuilder("lxml")
-                                 , namespaceHTMLElements=False)
 
 def checkLogin(responseTree = None):
     if responseTree == None:
         response = requests.get(LOGIN_URL, headers=headers, cookies=cookie_jar)
-        responseTree = htmlParser.parse(response.content)
+        responseTree = BeautifulSoup(response.content)
 
     # check for login 
-    return len(responseTree.xpath('//input[@id="signinpasswd"]')) == 0
+    return responseTree.find('input', id="signinpasswd") == None
 
 def fetchSeries():
     if len(cached_series) > 0:
         return cached_series
 
     response = requests.get(MY_SERIES_URL, headers=headers, cookies=cookie_jar)
-    responseTree = htmlParser.parse(response.content)
-    seriesDivs = responseTree.xpath('//div[contains(@id, "seriesbox")]')
+    responseTree = BeautifulSoup(response.content)
+    seriesDivs = responseTree.find_all('div', id=re.compile("seriesbox"))
     series = []
     for seriesDiv in seriesDivs:
-        href = seriesDiv.xpath('div[@class="myseriest"]/a')[0].attrib['href']
-        enName = seriesDiv.xpath('div[@class="myseriest"]/a/span/text()')[0].strip()
-        ruName = seriesDiv.xpath('div[@class="myseriest"]/a/span/text()')[1].strip()
+        href = seriesDiv.select('div.myseriest > a')[0]['href']
+        enName = seriesDiv.select('div.myseriest > a > span')[0].string.strip()
+        ruName = seriesDiv.select('div.myseriest > a > span')[1].string.strip()
         serId = href.replace('/Series/', '')
-        episodeDivs = seriesDiv.xpath('a/span[contains(@class,"myseriesblock")]/..')
+        episodeDivs = seriesDiv.find_all('span', attrs={'class':re.compile("myseriesblock")})
         unwatchedEpisodes = []
         for episodeDiv in episodeDivs:
-            epHref = episodeDiv.attrib['href']
-            enEpName = episodeDiv.xpath('span/span/span[@class="myseriesbten"]/text()')[0].strip()
-            ruEpName = episodeDiv.xpath('span/span/span[@class="myseriesbtru"]/text()')[0].strip()
-            unwatchedEpisodes.append({'href': epHref, 'en':enEpName, 'ru':ruEpName})
+            aParent = episodeDiv.parent
+            epHref = aParent['href']
+            enEpName = episodeDiv.select('span.myseriesbten')[0].string.strip()
+            ruEpName = episodeDiv.select('span.myseriesbtru')[0].string.strip()
+            hasHQ = len(episodeDiv.select('span.myserieshq')) > 0
+            hasENSound = len(episodeDiv.select('span.myseriesesound')) > 0
+            hasRUSound = len(episodeDiv.select('span.myseriesrsound')) > 0
+            hasENSubs = len(episodeDiv.select('span.myseriesesub')) > 0
+            hasRUSubs = len(episodeDiv.select('span.myseriesrsub')) > 0
+            unwatchedEpisodes.append({'href': epHref, 'en':enEpName, 'ru':ruEpName
+                                    ,'hasHQ':hasHQ, 'hasENSound':hasENSound, 'hasRUSound':hasRUSound
+                                    , 'hasRUSubs':hasRUSubs, 'hasENSubs':hasENSubs})
         series.append({"href":href, "en":enName, "ru":ruName, "id": serId, 'unwatchedEpisodes':unwatchedEpisodes})
 
     with open(cache_file, 'wb') as fp:
@@ -62,7 +67,21 @@ else:
         for episode in series[0]['unwatchedEpisodes']:
             title = episode['en']
             title += ('' if episode['en'] == episode['ru'] else (' / ' + episode['ru']))
-            iDict = dict(title=title, subtitle=episode['href'], uid=episode['href'], valid=True, arg=TURBOFILM_URL + episode['href'])
+            subtitle = ""
+            subtitle += "hd " if episode['hasHQ'] else ""
+            if episode['hasENSound'] or episode['hasRUSound']:
+                subtitle += "sound: "
+                subtitle += "ru, " if episode['hasRUSound'] else ""
+                subtitle += "en " if episode['hasENSound'] else ""
+            if subtitle.endswith(', '):
+                subtitle = subtitle[:-2] + ' '
+            if episode['hasENSubs'] or episode['hasRUSubs']:
+                subtitle += "subs: "
+                subtitle += "ru, " if episode['hasRUSubs'] else ""
+                subtitle += "en" if episode['hasENSubs'] else ""
+            if subtitle.endswith(', '):
+                subtitle = subtitle[:-2]
+            iDict = dict(title=title, subtitle=subtitle, uid=episode['href'], valid=True, arg=TURBOFILM_URL + episode['href'])
             items.append(alp.Item(**iDict))
         pass
     else:

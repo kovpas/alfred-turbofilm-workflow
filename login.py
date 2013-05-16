@@ -1,23 +1,21 @@
 import commands
 import alp
 from alp.request import requests
-import html5lib
 from conf import *
+from alp.request.bs4 import BeautifulSoup
 import cookielib
-htmlParser = html5lib.HTMLParser(tree=html5lib.treebuilders.getTreeBuilder("lxml")
-                                 , namespaceHTMLElements=False)
 
 def checkLogin(responseTree = None):
     if responseTree == None:
         response = requests.get(LOGIN_URL, headers=headers, cookies=cookie_jar)
-        responseTree = htmlParser.parse(response.content)
+        responseTree = BeautifulSoup(response.content)
 
     # check for login 
-    return len(responseTree.xpath('//input[@id="signinpasswd"]')) == 0
+    return responseTree.find('input', id="signinpasswd") == None
 
 def login(login, password):
     response = requests.post(LOGIN_URL, {'login': login, 'passwd': password, 'remember': 'on'}, headers=headers, cookies=cookie_jar)
-    return checkLogin(htmlParser.parse(response.content))
+    return checkLogin(BeautifulSoup(response.content))
 
 if len(alp.args()) == 1 and alp.args()[0] == "-safari":
     status, output = commands.getstatusoutput("python BinaryCookieReader.py ~/Library/Cookies/Cookies.binarycookies .turbofilm.tv")
