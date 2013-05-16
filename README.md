@@ -12,6 +12,12 @@ First you need to authenticate at turbofilm:
 
 Authentication cookies are stored, so you don't need to re-authenticate again.
 
+Also you can check your authentication status with the following command:
+
+`tfauth`
+
+Growl or Mountain Lion notification will be shown with a corresponding status.
+
 After that the following commands are available:
 
 | Command | Description |
