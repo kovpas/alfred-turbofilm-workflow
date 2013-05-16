@@ -10,6 +10,8 @@ First you need to authenticate at turbofilm:
 
 `tfauth username password`
 
+Authentication cookies are stored, so you don't need to re-authenticate again.
+
 After that the following commands are available:
 
 | Command | Description |
