@@ -37,12 +37,14 @@ if len(alp.args()) == 0: #check for auth state
     else:
         print "Authenticated"
 elif not checkLogin():
-    # result = login(alp.args()[0], alp.args[1])
-    result = login(alp.args()[0], alp.args()[1])
-    if result:
-        cookie_jar.save(cookie_file, ignore_discard=True)
-        print "Authentication succeeded"
-    else:
+    if len(alp.args()) < 2:
         print "Authentication failed"
+    else :
+        result = login(alp.args()[0], alp.args()[1])
+        if result:
+            cookie_jar.save(cookie_file, ignore_discard=True)
+            print "Authentication succeeded"
+        else:
+            print "Authentication failed"
 else:
     print "Authenticated"
