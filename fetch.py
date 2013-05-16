@@ -24,14 +24,14 @@ def fetchSeries():
 
     response = requests.get(MY_SERIES_URL, headers=headers, cookies=cookie_jar)
     responseTree = htmlParser.parse(response.content)
-    seriesDivs = responseTree.xpath('//div[starts-with(@id, "seriesbox")]')
+    seriesDivs = responseTree.xpath('//div[contains(@id, "seriesbox")]')
     series = []
     for seriesDiv in seriesDivs:
         href = seriesDiv.xpath('div[@class="myseriest"]/a')[0].attrib['href']
         enName = seriesDiv.xpath('div[@class="myseriest"]/a/span/text()')[0].strip()
         ruName = seriesDiv.xpath('div[@class="myseriest"]/a/span/text()')[1].strip()
         serId = href.replace('/Series/', '')
-        episodeDivs = seriesDiv.xpath('a/span[@class="myseriesblock"]/..')
+        episodeDivs = seriesDiv.xpath('a/span[contains(@class,"myseriesblock")]/..')
         unwatchedEpisodes = []
         for episodeDiv in episodeDivs:
             epHref = episodeDiv.attrib['href']
